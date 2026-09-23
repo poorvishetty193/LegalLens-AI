@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build & Dist
+dist/
+build/
+.output/
+
+# Environment & Secrets
+.env
+.env.*
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.*.json
+!vercel.json
+
+# IDE & Logs
+.vscode/
+.idea/
+*.log
+
+# Temp files
+*.tmp
+temp_*
