@@ -3,10 +3,61 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export const Signup: React.FC = () => {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signUpWithEmail } = useAuth();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const getFirebaseErrorMessage = (err: any): string => {
+    const code = err?.code || "";
+    switch (code) {
+      case "auth/email-already-in-use":
+        return "An account with this email address already exists. Please sign in instead.";
+      case "auth/invalid-email":
+        return "Please enter a valid email address.";
+      case "auth/weak-password":
+        return "Password is too weak. Please use a password with at least 8 characters.";
+      default:
+        return err?.message || "Failed to create account. Please try again.";
+    }
+  };
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!fullName.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signUpWithEmail(email.trim(), password, fullName.trim());
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(getFirebaseErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleSignup = async () => {
     setError(null);
@@ -27,6 +78,15 @@ export const Signup: React.FC = () => {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-xl relative z-10 space-y-4">
+        {/* Top Status Bar Pill */}
+        <div className="bg-surface-container-lowest/80 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-outline-variant/30 flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+            <span>Zero-Retention AI • 256-Bit Encrypted Session</span>
+          </div>
+          <span className="font-code-clause text-code-clause text-on-surface-variant hidden sm:inline">SOC2 Type II</span>
+        </div>
+
         {/* Elevated Card */}
         <div className="bg-surface-container-lowest rounded-xl shadow-xl p-8 sm:p-12 border border-outline-variant/40">
           <div className="text-center space-y-3 mb-8">
@@ -43,14 +103,136 @@ export const Signup: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-3 bg-error-container/60 text-on-error-container rounded-lg font-label-sm text-label-sm border border-error/20">
-              {error}
+            <div className="mb-6 p-3 bg-error-container/60 text-on-error-container rounded-lg font-label-sm text-label-sm border border-error/20 flex items-center gap-2">
+              <span className="material-symbols-outlined text-base shrink-0">error</span>
+              <span>{error}</span>
             </div>
           )}
+
+          {/* Email Signup Form */}
+          <form onSubmit={handleEmailSignup} className="space-y-4 mb-6">
+            <div>
+              <label htmlFor="fullName" className="block font-label-md text-label-md text-on-surface font-medium mb-1.5">
+                Full Name
+              </label>
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                  <span className="material-symbols-outlined text-xl">person</span>
+                </div>
+                <input
+                  id="fullName"
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="Sarah Jenkins"
+                  aria-label="Full Name"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block font-label-md text-label-md text-on-surface font-medium mb-1.5">
+                Work or Personal Email
+              </label>
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                  <span className="material-symbols-outlined text-xl">alternate_email</span>
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="name@organization.com"
+                  aria-label="Work or Personal Email"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block font-label-md text-label-md text-on-surface font-medium mb-1.5">
+                Password (min 8 characters)
+              </label>
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                  <span className="material-symbols-outlined text-xl">lock</span>
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-11 pr-11 py-3 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="••••••••"
+                  aria-label="Password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-on-surface"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block font-label-md text-label-md text-on-surface font-medium mb-1.5">
+                Confirm Password
+              </label>
+              <div className="relative rounded-lg shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                  <span className="material-symbols-outlined text-xl">lock_reset</span>
+                </div>
+                <input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg border border-outline-variant/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="••••••••"
+                  aria-label="Confirm Password"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-md text-label-md shadow-md transition-all group disabled:opacity-50 mt-2"
+            >
+              <span>{loading ? "Creating account..." : "Create account"}</span>
+              <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
+                arrow_forward
+              </span>
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-outline-variant/40"></div>
+            </div>
+            <div className="relative flex justify-center text-label-sm font-label-sm">
+              <span className="bg-surface-container-lowest px-3 text-on-surface-variant uppercase tracking-wider">
+                Or sign up with Google
+              </span>
+            </div>
+          </div>
 
           {/* Federated Google SSO */}
           <div className="space-y-4">
             <button
+              type="button"
               onClick={handleGoogleSignup}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md rounded-lg shadow-sm transition-all border border-outline-variant/40 group disabled:opacity-50"
@@ -72,7 +254,13 @@ export const Signup: React.FC = () => {
             </Link>
           </div>
         </div>
+
+        {/* Bottom Metrics Bar */}
+        <div className="text-center font-code-clause text-code-clause text-on-surface-variant">
+          Engine v4.19 • ID: LENS-AUTH-2026
+        </div>
       </div>
     </div>
   );
 };
+
